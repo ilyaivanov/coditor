@@ -17,3 +17,11 @@ typedef float f32;
 typedef double f64;
 
 typedef i32 bool;
+
+typedef struct MyBitmap
+{
+    u32 width;
+    u32 height;
+    u32 bytesPerPixel;
+    u32 *pixels;
+} MyBitmap;
