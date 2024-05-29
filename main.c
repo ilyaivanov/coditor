@@ -2,6 +2,8 @@
 
 #include "types.h"
 #include "win32.c"
+#include "performance.c"
+#include "format.c"
 
 bool isRunning = 1;
 bool isFullscreen = 0;
@@ -68,6 +70,18 @@ LRESULT OnEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(window, message, wParam, lParam);
 }
 
+void PrintMetric(char *label, PerfMetric metric)
+{
+    u64 time = GetMicrosecondsFor(metric);
+
+    OutputDebugStringA(label);
+    OutputDebugStringA(": ");
+    char val[30] = {0};
+    FormatNumber(time, (char *)&val);
+    OutputDebugStringA(val);
+    OutputDebugStringA("us\n");
+}
+
 void WinMainCRTStartup()
 {
     PreventWindowsDPIScaling();
@@ -77,6 +91,7 @@ void WinMainCRTStartup()
 
     MSG msg;
 
+    InitPerf();
     while (isRunning)
     {
         while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE))
@@ -84,13 +99,20 @@ void WinMainCRTStartup()
             TranslateMessage(&msg);
             DispatchMessageA(&msg);
         }
-
+        StartMetric(Memory);
         memset(canvas.pixels, 0, canvas.bytesPerPixel * canvas.width * canvas.height);
+        EndMetric(Memory);
 
         PaintRect(&canvas, 200, 200, 200, 200, 0xffffff);
 
+        StartMetric(DiBits);
         StretchDIBits(dc, 0, 0, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height, canvas.pixels, &bitmapInfo, DIB_RGB_COLORS, SRCCOPY);
-        Sleep(10); // TODO: proper FPS handling needed, this is just now not to burn CPU
+        EndMetric(DiBits);
+
+        PrintMetric("Memory", Memory);
+        PrintMetric("DiBits", DiBits);
+
+        Sleep(100); // TODO: proper FPS handling needed, this is just now not to burn CPU
     }
 
     ExitProcess(0);
