@@ -25,3 +25,21 @@ typedef struct MyBitmap
     u32 bytesPerPixel;
     u32 *pixels;
 } MyBitmap;
+
+typedef struct V2
+{
+    i32 x, y;
+} V2;
+
+#define Kilobytes(val) (val * 1024)
+#define Megabytes(val) Kilobytes(val * 1024)
+#define Gigabytes(val) Megabytes(val * 1024)
+
+#define ArrayLength(array) (sizeof(array) / sizeof(array[0]))
+#define Assert(cond)   \
+    if (!(cond))       \
+    {                  \
+        *(u32 *)0 = 0; \
+    }
+
+#define Fail(msg) Assert(0)

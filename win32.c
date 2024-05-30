@@ -110,3 +110,34 @@ void *memset(void *dest, int c, size_t count)
     }
     return dest;
 }
+
+//
+// File IO
+//
+
+typedef struct FileContent
+{
+    char *content;
+    i32 size;
+} FileContent;
+
+FileContent ReadMyFileImp(char *path)
+{
+    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+
+    LARGE_INTEGER size;
+    GetFileSizeEx(file, &size);
+
+    u32 fileSize = (u32)size.QuadPart;
+
+    void *buffer = VirtualAllocateMemory(fileSize);
+
+    DWORD bytesRead;
+    ReadFile(file, buffer, fileSize, &bytesRead, 0);
+    CloseHandle(file);
+
+    FileContent res = {0};
+    res.content = (char *)buffer;
+    res.size = bytesRead;
+    return res;
+}
