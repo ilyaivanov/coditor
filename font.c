@@ -227,3 +227,34 @@ i32 GetTextWidth(const u8 *text)
     }
     return res;
 }
+
+HFONT myfont;
+void DrawChar(HBITMAP myBitmap, HDC dc)
+{
+
+    SelectObject(dc, myBitmap);
+    SelectObject(dc, myfont);
+
+    SetBkColor(dc, 0x000000);
+    SetTextColor(dc, 0xffffff);
+
+    TextOutW(dc, 0, 0, L"Hello World", 11);
+}
+
+void InitMyFont()
+{
+    myfont = CreateFontA(44, 0, 0, 0,
+                         FW_NORMAL, // Weight
+                         0,         // Italic
+                         0,         // Underline
+                         0,         // Strikeout
+                         DEFAULT_CHARSET,
+                         OUT_TT_ONLY_PRECIS,
+                         CLIP_DEFAULT_PRECIS,
+
+                         // I've experimented with the Chrome and it doesn't render LCD quality for fonts above 32px
+                         CLEARTYPE_QUALITY,
+
+                         DEFAULT_PITCH,
+                         "Segoe UI");
+}

@@ -10,11 +10,14 @@ bool isRunning = 1;
 bool isFullscreen = 0;
 f32 appScale = 1.0f;
 
+HDC newDc;
 BITMAPINFO bitmapInfo;
 MyBitmap canvas;
-HBITMAP bitmap;
+HBITMAP myNewBitmap;
+
 i32 zDelta = 0;
 FontData consolasFont14;
+FontData consolasFontSelected14;
 
 inline void CopyBitmapRectTo(MyBitmap *sourceT, MyBitmap *destination, i32 offsetX, i32 offsetY)
 {
@@ -49,17 +52,17 @@ inline void PaintRect(MyBitmap *destination, i32 offsetX, i32 offsetY, u32 width
         offsetY = 0;
     }
     // need to check bounds of the screen
-    u32 *row = (u32 *)destination->pixels + destination->width * (destination->height - 1) + offsetX - offsetY * destination->width;
+    u32 *row = (u32 *)destination->pixels + offsetX - offsetY * destination->width;
     for (i32 y = 0; y < height; y += 1)
     {
         u32 *pixel = row;
         for (i32 x = 0; x < width; x += 1)
         {
-            if ((y + offsetY) > 0 && (x + offsetX) > 0 && y + offsetY < destination->height && x + offsetX < destination->width)
+            if ((y + offsetY) >= 0 && (x + offsetX) >= 0 && y + offsetY < destination->height && x + offsetX < destination->width)
                 *pixel = color;
             pixel += 1;
         }
-        row -= destination->width;
+        row += destination->width;
     }
 }
 
@@ -90,11 +93,12 @@ LRESULT OnEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
         canvas.height = HIWORD(lParam);
         canvas.bytesPerPixel = 4;
 
-        if (canvas.pixels)
-            DeleteObject(bitmap);
+        // if (canvas.pixels)
+        //     DeleteObject(bitmap);
 
         InitBitmapInfo(&bitmapInfo, canvas.width, canvas.height);
-        bitmap = CreateDIBSection(dc, &bitmapInfo, DIB_RGB_COLORS, &canvas.pixels, 0, 0);
+
+        myNewBitmap = CreateDIBSection(newDc, &bitmapInfo, DIB_RGB_COLORS, &canvas.pixels, 0, 0);
 
         // fontCanvas = (MyBitmap){.bytesPerPixel = 4, .height = textureSize, .width = textureSize, .pixels = bits};
 
@@ -129,14 +133,27 @@ void PrintMetric(char *label, PerfMetric metric)
 }
 
 FileContent file;
+i32 selectedChar = 2;
 
 void DrawFile()
 {
     i32 middleY = 20 + zDelta;
     i32 x = 20;
     char *ch = file.content;
+    i32 lineEven = 1;
+
     for (int i = 0; i < file.size; i++)
     {
+        if (selectedChar == i)
+        {
+            currentFont = &consolasFontSelected14;
+            // PaintRect(&canvas, x, middleY, currentFont->charWidth, currentFont->charHeight, 0xffffff);
+        }
+        else
+        {
+            currentFont = &consolasFont14;
+        }
+
         if (*ch == '\r')
         {
         }
@@ -144,6 +161,7 @@ void DrawFile()
         {
             x = 20;
             middleY += currentFont->charHeight;
+            lineEven = !lineEven;
         }
         else
         {
@@ -161,19 +179,22 @@ void WinMainCRTStartup()
     PreventWindowsDPIScaling();
 
     HWND window = OpenWindow(OnEvent, 0x222222);
-    HDC dc = GetDC(window);
+    HDC windowDC = GetDC(window);
+
+    newDc = CreateCompatibleDC(0);
 
     MSG msg;
 
     InitPerf();
-    InitFontSystem();
+    // InitFontSystem();
+    InitMyFont();
 
     Arena arena = CreateArena(Megabytes(44));
-    InitFont(&consolasFont14, FontInfoClearType("Consolas", 14, 0xffffff, 0x00000000), &arena);
+    // InitFont(&consolasFont14, FontInfoClearType("Consolas", 14, 0xFFFFFF, 0x00111111), &arena);
+    // InitFont(&consolasFontSelected14, FontInfoClearType("Consolas", 14, 0x000000, 0x00FFFFFF), &arena);
 
     file = ReadMyFileImp("..\\main.c");
 
-    currentFont = &consolasFont14;
     while (isRunning)
     {
         while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE))
@@ -182,13 +203,16 @@ void WinMainCRTStartup()
             DispatchMessageA(&msg);
         }
         StartMetric(Memory);
-        memset(canvas.pixels, 0x22, canvas.bytesPerPixel * canvas.width * canvas.height);
+        memset(canvas.pixels, 0x11, canvas.bytesPerPixel * canvas.width * canvas.height);
         EndMetric(Memory);
 
-        DrawFile();
+        PaintRect(&canvas, 0, 0, 10, 10, 0xffffff);
+        DrawChar(myNewBitmap, newDc);
+
+        // DrawFile();
 
         StartMetric(DiBits);
-        StretchDIBits(dc, 0, 0, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height, canvas.pixels, &bitmapInfo, DIB_RGB_COLORS, SRCCOPY);
+        StretchDIBits(windowDC, 0, 0, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height, canvas.pixels, &bitmapInfo, DIB_RGB_COLORS, SRCCOPY);
         EndMetric(DiBits);
 
         PrintMetric("Memory", Memory);

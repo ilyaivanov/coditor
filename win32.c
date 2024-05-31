@@ -14,7 +14,7 @@ void InitBitmapInfo(BITMAPINFO *bitmapInfo, u32 width, u32 height)
     bitmapInfo->bmiHeader.biSize = sizeof(bitmapInfo->bmiHeader);
     bitmapInfo->bmiHeader.biBitCount = 32;
     bitmapInfo->bmiHeader.biWidth = width;
-    bitmapInfo->bmiHeader.biHeight = height; // negative value will  makes rows go up, instead of going down by default
+    bitmapInfo->bmiHeader.biHeight = -height; // negative height makes rows go down, instead of up by default
     bitmapInfo->bmiHeader.biPlanes = 1;
     bitmapInfo->bmiHeader.biCompression = BI_RGB;
 }
