@@ -139,39 +139,36 @@ void DrawFile()
 {
     i32 middleY = 20 + zDelta;
     i32 x = 20;
-    char *ch = file.content;
-    i32 lineEven = 1;
+    char *lineStart = file.content;
+    char *ch = lineStart;
+    i32 lineLength = 0;
 
     for (int i = 0; i < file.size; i++)
     {
-        if (selectedChar == i)
-        {
-            currentFont = &consolasFontSelected14;
-            // PaintRect(&canvas, x, middleY, currentFont->charWidth, currentFont->charHeight, 0xffffff);
-        }
-        else
-        {
-            currentFont = &consolasFont14;
-        }
-
         if (*ch == '\r')
         {
         }
         else if (*ch == '\n')
         {
-            x = 20;
-            middleY += currentFont->charHeight;
-            lineEven = !lineEven;
+
+            DrawLine(myNewBitmap, newDc, x, middleY, lineStart, lineLength);
+            lineStart = ch + 1;
+            lineLength = 0;
+            // x = 20;
+            middleY += 22;
         }
         else
         {
 
-            MyBitmap *texture = &currentFont->textures[*ch];
-            CopyBitmapRectTo(texture, &canvas, x, middleY);
-            x += texture->width + GetKerningValue(*ch, *(ch + 1));
+            lineLength++;
+            // MyBitmap *texture = &currentFont->textures[*ch];
+            // CopyBitmapRectTo(texture, &canvas, x, middleY);
+            // x += texture->width + GetKerningValue(*ch, *(ch + 1));
         }
         ch++;
     }
+    if (lineLength > 0)
+        DrawLine(myNewBitmap, newDc, x, middleY, lineStart, lineLength);
 }
 
 void WinMainCRTStartup()
@@ -189,7 +186,7 @@ void WinMainCRTStartup()
     // InitFontSystem();
     InitMyFont();
 
-    Arena arena = CreateArena(Megabytes(44));
+    // Arena arena = CreateArena(Megabytes(44));
     // InitFont(&consolasFont14, FontInfoClearType("Consolas", 14, 0xFFFFFF, 0x00111111), &arena);
     // InitFont(&consolasFontSelected14, FontInfoClearType("Consolas", 14, 0x000000, 0x00FFFFFF), &arena);
 
@@ -206,16 +203,19 @@ void WinMainCRTStartup()
         memset(canvas.pixels, 0x11, canvas.bytesPerPixel * canvas.width * canvas.height);
         EndMetric(Memory);
 
-        PaintRect(&canvas, 0, 0, 10, 10, 0xffffff);
-        DrawChar(myNewBitmap, newDc);
+        // PaintRect(&canvas, 0, 0, 10, 10, 0xffffff);
+        // DrawChar(myNewBitmap, newDc);
 
-        // DrawFile();
+        StartMetric(Draw);
+        DrawFile();
+        EndMetric(Draw);
 
         StartMetric(DiBits);
         StretchDIBits(windowDC, 0, 0, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height, canvas.pixels, &bitmapInfo, DIB_RGB_COLORS, SRCCOPY);
         EndMetric(DiBits);
 
         PrintMetric("Memory", Memory);
+        PrintMetric("Draw", Draw);
         PrintMetric("DiBits", DiBits);
 
         Sleep(10); // TODO: proper FPS handling needed, this is just now not to burn CPU

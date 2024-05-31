@@ -229,21 +229,21 @@ i32 GetTextWidth(const u8 *text)
 }
 
 HFONT myfont;
-void DrawChar(HBITMAP myBitmap, HDC dc)
+// void DrawCh(HBITMAP myBitmap, HDC dc, i32 x, i32 y, char *lineStart, i32 lineLength)
+void DrawLine(HBITMAP myBitmap, HDC dc, i32 x, i32 y, char *ch, i32 length)
 {
-
     SelectObject(dc, myBitmap);
     SelectObject(dc, myfont);
 
     SetBkColor(dc, 0x000000);
     SetTextColor(dc, 0xffffff);
 
-    TextOutW(dc, 0, 0, L"Hello World", 11);
+    TextOutA(dc, x, y, ch, length);
 }
 
 void InitMyFont()
 {
-    myfont = CreateFontA(44, 0, 0, 0,
+    myfont = CreateFontA((i32)(14 * 1.5f), 0, 0, 0,
                          FW_NORMAL, // Weight
                          0,         // Italic
                          0,         // Underline
