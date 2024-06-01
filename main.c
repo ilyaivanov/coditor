@@ -4,6 +4,17 @@
 #include "win32.c"
 #include "performance.c"
 #include "format.c"
+#include "string.c"
+
+typedef enum Mode
+{
+    ModeNormal,
+    ModeInsert
+} Mode;
+
+Mode mode = ModeNormal;
+
+bool ignoreNextCharEvent = 0;
 
 bool isRunning = 1;
 bool isFullscreen = 0;
@@ -22,6 +33,9 @@ i32 pagePaddingY = 15;
 i32 zDelta = 0;
 
 i32 cursorPosition = 0;
+
+FileContent file;
+WideString wFile;
 
 inline void PaintRect(MyBitmap *destination, i32 offsetX, i32 offsetY, u32 width, u32 height, u32 color)
 {
@@ -104,11 +118,50 @@ LRESULT OnEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 
         break;
 
+    case WM_CHAR:
+        if (mode == ModeInsert)
+        {
+            if (ignoreNextCharEvent)
+                ignoreNextCharEvent = 0;
+            else
+            {
+                if (wParam == '\r')
+                    InsertCharAt(&wFile, cursorPosition, L'\n');
+                else
+                    InsertCharAt(&wFile, cursorPosition, wParam);
+                cursorPosition++;
+            }
+        }
+        break;
+
     case WM_KEYDOWN:
         if (wParam == VK_F11)
         {
             isFullscreen = !isFullscreen;
             SetFullscreen(window, isFullscreen);
+        }
+
+        if (mode == ModeInsert && wParam == VK_ESCAPE)
+            mode = ModeNormal;
+
+        if (mode == ModeNormal)
+        {
+
+            if (wParam == 'I')
+            {
+                mode = ModeInsert;
+                ignoreNextCharEvent = 1;
+            }
+            if (wParam == 'L' && cursorPosition < wFile.size - 1)
+                cursorPosition++;
+            if (wParam == 'H' && cursorPosition > 0)
+                cursorPosition--;
+            if (wParam == 'X')
+            {
+                RemoveWCharAtPosition(&wFile, cursorPosition);
+                if (cursorPosition > wFile.size - 1)
+                    cursorPosition = wFile.size - 1;
+            }
         }
         break;
     }
@@ -125,22 +178,27 @@ void PrintMetric(char *label, PerfMetric metric)
     TextOutA(dc, canvas.width - 80, canvas.height - tm.tmHeight, val, len);
 }
 
-FileContent file;
-WCHAR *fileContent;
-u32 fileContentSize;
-i32 selectedChar = 2;
-
 void DrawFile()
 {
     i32 middleY = pagePaddingY + zDelta;
     i32 x = pagePaddingX;
 
-    WCHAR *lineStart = fileContent;
+    WCHAR *lineStart = wFile.content;
     WCHAR *ch = lineStart;
     i32 lineLength = 0;
 
-    for (int i = 0; i < fileContentSize; i++)
+    for (int i = 0; i < wFile.size; i++)
     {
+        if (i == cursorPosition)
+        {
+            SIZE size;
+            GetTextExtentPoint32A(dc, "W", 1, &size);
+
+            i32 lineOffset = lineStart - wFile.content;
+            u32 carretColor = mode == ModeNormal ? 0xaa55aa : 0x55aa55;
+            PaintRect(&canvas, x + size.cx * (cursorPosition - lineOffset), middleY, size.cx, tm.tmHeight, carretColor);
+        }
+
         if (*ch == '\r')
         {
         }
@@ -154,7 +212,6 @@ void DrawFile()
         }
         else
         {
-
             lineLength++;
         }
         ch++;
@@ -180,11 +237,14 @@ void WinMainCRTStartup()
 
     // I need to figure what to do with /r symbols on windows if I want to have proper file handling
     file = ReadMyFileImp("..\\sample.txt");
-    fileContentSize = MultiByteToWideChar(CP_UTF8, 0, file.content, file.size, 0, 0);
+    RemoveCarriageReturns(&file);
 
-    fileContent = VirtualAllocateMemory(fileContentSize * 2);
+    wFile.size = MultiByteToWideChar(CP_UTF8, 0, file.content, file.size, 0, 0);
 
-    MultiByteToWideChar(CP_UTF8, 0, file.content, file.size, fileContent, fileContentSize);
+    wFile.capacity = wFile.size * 2;
+    wFile.content = VirtualAllocateMemory(wFile.capacity);
+
+    MultiByteToWideChar(CP_UTF8, 0, file.content, file.size, wFile.content, wFile.size);
 
     while (isRunning)
     {
@@ -197,9 +257,6 @@ void WinMainCRTStartup()
         memset(canvas.pixels, 0x11, canvas.bytesPerPixel * canvas.width * canvas.height);
         EndMetric(Memory);
 
-        SIZE size;
-        GetTextExtentPoint32A(dc, "W", 1, &size);
-        PaintRect(&canvas, pagePaddingX, pagePaddingY, size.cx, tm.tmHeight, 0xaa55aa);
         StartMetric(Draw);
         DrawFile();
         EndMetric(Draw);
