@@ -191,6 +191,8 @@ void DrawFile()
     {
         if (i == cursorPosition)
         {
+            // TODO: even monospaced fonts like consolas do not show all chars with the same width, for example ✔✔✔✔✔ (five chars is wider)
+            //                                                                                                  12345   (than this five chars)
             SIZE size;
             GetTextExtentPoint32A(dc, "W", 1, &size);
 
@@ -236,7 +238,7 @@ void WinMainCRTStartup()
     InitPerf();
 
     // I need to figure what to do with /r symbols on windows if I want to have proper file handling
-    file = ReadMyFileImp("..\\sample.txt");
+    file = ReadMyFileImp("..\\main.c");
     RemoveCarriageReturns(&file);
 
     wFile.size = MultiByteToWideChar(CP_UTF8, 0, file.content, file.size, 0, 0);
