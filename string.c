@@ -2,13 +2,6 @@
 #include "types.h"
 #include "win32.c"
 
-typedef struct WideString
-{
-    WCHAR *content;
-    u32 size;
-    u32 capacity;
-} WideString;
-
 inline void PlaceLineEnd(WideString *buffer)
 {
     if (buffer->content)

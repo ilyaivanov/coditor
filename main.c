@@ -1,10 +1,10 @@
 #include <windows.h>
-
 #include "types.h"
 #include "win32.c"
 #include "performance.c"
 #include "format.c"
 #include "string.c"
+#include "cursor.c"
 
 typedef enum Mode
 {
@@ -156,6 +156,10 @@ LRESULT OnEvent(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
                 cursorPosition++;
             if (wParam == 'H' && cursorPosition > 0)
                 cursorPosition--;
+            if (wParam == 'J')
+                cursorPosition = GetPositionOnNextLine(&wFile, cursorPosition);
+            if (wParam == 'K')
+                cursorPosition = GetPositionOnPrevLine(&wFile, cursorPosition);
             if (wParam == 'X')
             {
                 RemoveWCharAtPosition(&wFile, cursorPosition);
@@ -180,7 +184,7 @@ void PrintMetric(char *label, PerfMetric metric)
 
 void DrawFile()
 {
-    i32 middleY = pagePaddingY + zDelta;
+    i32 textY = pagePaddingY + zDelta;
     i32 x = pagePaddingX;
 
     WCHAR *lineStart = wFile.content;
@@ -191,14 +195,14 @@ void DrawFile()
     {
         if (i == cursorPosition)
         {
-            // TODO: even monospaced fonts like consolas do not show all chars with the same width, for example ✔✔✔✔✔ (five chars is wider)
+            // TODO: even monospaced fonts like consolas do not show all chars with the same width, for example ✔✔✔✔✔ (five chars are wider)
             //                                                                                                  12345   (than this five chars)
             SIZE size;
             GetTextExtentPoint32A(dc, "W", 1, &size);
 
             i32 lineOffset = lineStart - wFile.content;
             u32 carretColor = mode == ModeNormal ? 0xaa55aa : 0x55aa55;
-            PaintRect(&canvas, x + size.cx * (cursorPosition - lineOffset), middleY, size.cx, tm.tmHeight, carretColor);
+            PaintRect(&canvas, x + size.cx * (cursorPosition - lineOffset), textY + 2, size.cx, tm.tmHeight, carretColor);
         }
 
         if (*ch == '\r')
@@ -207,10 +211,10 @@ void DrawFile()
         else if (*ch == '\n')
         {
 
-            TextOutW(dc, x, middleY, lineStart, lineLength);
+            TextOutW(dc, x, textY, lineStart, lineLength);
             lineStart = ch + 1;
             lineLength = 0;
-            middleY += tm.tmHeight;
+            textY += tm.tmHeight;
         }
         else
         {
@@ -219,7 +223,7 @@ void DrawFile()
         ch++;
     }
     if (lineLength > 0)
-        TextOutW(dc, x, middleY, lineStart, lineLength);
+        TextOutW(dc, x, textY, lineStart, lineLength);
 }
 
 void WinMainCRTStartup()
@@ -238,7 +242,7 @@ void WinMainCRTStartup()
     InitPerf();
 
     // I need to figure what to do with /r symbols on windows if I want to have proper file handling
-    file = ReadMyFileImp("..\\main.c");
+    file = ReadMyFileImp("..\\sample.txt");
     RemoveCarriageReturns(&file);
 
     wFile.size = MultiByteToWideChar(CP_UTF8, 0, file.content, file.size, 0, 0);

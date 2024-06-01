@@ -31,6 +31,13 @@ typedef struct V2
     i32 x, y;
 } V2;
 
+typedef struct WideString
+{
+    WCHAR *content;
+    u32 size;
+    u32 capacity;
+} WideString;
+
 #define Kilobytes(val) (val * 1024)
 #define Megabytes(val) Kilobytes(val * 1024)
 #define Gigabytes(val) Megabytes(val * 1024)
