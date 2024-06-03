@@ -60,7 +60,8 @@ inline void PaintRect(MyBitmap *destination, i32 offsetX, i32 offsetY, u32 width
 }
 void InitMyFont()
 {
-    consolasFont = CreateFontA(-MulDiv(14, GetDeviceCaps(dc, LOGPIXELSY), USER_DEFAULT_SCREEN_DPI), 0, 0, 0,
+    i32 fontHeight = MulDiv(15, GetDeviceCaps(dc, LOGPIXELSY), USER_DEFAULT_SCREEN_DPI);
+    consolasFont = CreateFontA(-fontHeight, 0, 0, 0,
                                FW_NORMAL, // Weight
                                0,         // Italic
                                0,         // Underline
@@ -201,7 +202,8 @@ void DrawFile()
             GetTextExtentPoint32A(dc, "W", 1, &size);
 
             i32 lineOffset = lineStart - wFile.content;
-            u32 carretColor = mode == ModeNormal ? 0xaa55aa : 0x55aa55;
+            u32 carretColor = mode == ModeNormal ? 0x0078D7 : 0x55aa55;
+
             PaintRect(&canvas, x + size.cx * (cursorPosition - lineOffset), textY + 2, size.cx, tm.tmHeight, carretColor);
         }
 
@@ -210,11 +212,20 @@ void DrawFile()
         }
         else if (*ch == '\n')
         {
+            if (lineLength > 20)
+            {
+                SetTextColor(dc, 0xffffff);
+                TextOutW(dc, x, textY, lineStart, lineLength);
+            }
 
-            TextOutW(dc, x, textY, lineStart, lineLength);
+            else
+            {
+                TextOutW(dc, x, textY, lineStart, lineLength);
+            }
+
             lineStart = ch + 1;
             lineLength = 0;
-            textY += tm.tmHeight;
+            textY += tm.tmHeight * 1.4f;
         }
         else
         {
@@ -242,7 +253,7 @@ void WinMainCRTStartup()
     InitPerf();
 
     // I need to figure what to do with /r symbols on windows if I want to have proper file handling
-    file = ReadMyFileImp("..\\sample.txt");
+    file = ReadMyFileImp("..\\main.c");
     RemoveCarriageReturns(&file);
 
     wFile.size = MultiByteToWideChar(CP_UTF8, 0, file.content, file.size, 0, 0);
@@ -260,14 +271,14 @@ void WinMainCRTStartup()
             DispatchMessageA(&msg);
         }
         StartMetric(Memory);
-        memset(canvas.pixels, 0x11, canvas.bytesPerPixel * canvas.width * canvas.height);
+        memset(canvas.pixels, 0x1C, canvas.bytesPerPixel * canvas.width * canvas.height);
         EndMetric(Memory);
 
         StartMetric(Draw);
         DrawFile();
         EndMetric(Draw);
 
-        PrintMetric("Memory", Memory);
+        // PrintMetric("Memory", Memory);
 
         StartMetric(DiBits);
         BitBlt(windowDC, 0, 0, canvas.width, canvas.height, dc, 0, 0, SRCCOPY);
